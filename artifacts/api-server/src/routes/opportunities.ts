@@ -1,0 +1,201 @@
+import { Router, type IRouter } from "express";
+import { eq, ilike, gte, or, desc, sql } from "drizzle-orm";
+import { db, opportunitiesTable } from "@workspace/db";
+import {
+  ListOpportunitiesQueryParams,
+  GetOpportunityParams,
+  GetStatsResponse,
+  ListCategoriesResponse,
+  GetTopOpportunitiesQueryParams,
+} from "@workspace/api-zod";
+
+const router: IRouter = Router();
+
+function rowToOpportunity(row: typeof opportunitiesTable.$inferSelect) {
+  return {
+    id: row.opportunityId,
+    title: row.title,
+    summary: row.summary,
+    category: row.category,
+    scores: {
+      final: row.scoresFinal,
+      frequency: row.scoresFrequency,
+      severity: row.scoresSeverity,
+      market: row.scoresMarket,
+      trend: row.scoresTrend,
+      competition: row.scoresCompetition,
+      feasibility: row.scoresFeasibility,
+    },
+    pain_points: row.painPoints,
+    trend: row.trend,
+    market: row.market,
+    competitors: row.competitors,
+    mvp: row.mvp,
+    risks: row.risks,
+    _meta: row.meta,
+  };
+}
+
+router.get("/opportunities", async (req, res): Promise<void> => {
+  const parsed = ListOpportunitiesQueryParams.safeParse(req.query);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+
+  const { category, search, sortBy, minScore } = parsed.data;
+
+  let query = db.select().from(opportunitiesTable).$dynamic();
+
+  const conditions: ReturnType<typeof eq>[] = [];
+
+  if (category) {
+    conditions.push(eq(opportunitiesTable.category, category));
+  }
+
+  if (minScore != null) {
+    conditions.push(gte(opportunitiesTable.scoresFinal, minScore));
+  }
+
+  if (search) {
+    const searchCondition = or(
+      ilike(opportunitiesTable.title, `%${search}%`),
+      ilike(opportunitiesTable.summary, `%${search}%`),
+    );
+    if (searchCondition) conditions.push(searchCondition as ReturnType<typeof eq>);
+  }
+
+  if (conditions.length > 0) {
+    const [first, ...rest] = conditions;
+    if (rest.length > 0) {
+      query = query.where(sql`${first} AND ${rest.reduce((acc, c) => sql`${acc} AND ${c}`)}`);
+    } else {
+      query = query.where(first);
+    }
+  }
+
+  if (sortBy === "newest") {
+    query = query.orderBy(desc(opportunitiesTable.createdAt));
+  } else if (sortBy === "trend") {
+    query = query.orderBy(desc(opportunitiesTable.scoresTrend));
+  } else if (sortBy === "market") {
+    query = query.orderBy(desc(opportunitiesTable.scoresMarket));
+  } else if (sortBy === "severity") {
+    query = query.orderBy(desc(opportunitiesTable.scoresSeverity));
+  } else {
+    query = query.orderBy(desc(opportunitiesTable.scoresFinal));
+  }
+
+  const rows = await query;
+  res.json(rows.map(rowToOpportunity));
+});
+
+router.get("/opportunities/top", async (req, res): Promise<void> => {
+  const parsed = GetTopOpportunitiesQueryParams.safeParse(req.query);
+  const limit = parsed.success && parsed.data.limit ? parsed.data.limit : 5;
+
+  const rows = await db
+    .select()
+    .from(opportunitiesTable)
+    .orderBy(desc(opportunitiesTable.scoresFinal))
+    .limit(limit);
+
+  res.json(rows.map(rowToOpportunity));
+});
+
+router.get("/opportunities/:id", async (req, res): Promise<void> => {
+  const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const params = GetOpportunityParams.safeParse({ id: rawId });
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+
+  const [row] = await db
+    .select()
+    .from(opportunitiesTable)
+    .where(eq(opportunitiesTable.opportunityId, params.data.id));
+
+  if (!row) {
+    res.status(404).json({ error: "Opportunity not found" });
+    return;
+  }
+
+  res.json(rowToOpportunity(row));
+});
+
+router.get("/stats", async (_req, res): Promise<void> => {
+  const rows = await db.select().from(opportunitiesTable);
+
+  const totalOpportunities = rows.length;
+  const contributors = new Set(
+    rows
+      .map((r) => (r.meta as { contributor?: string } | null)?.contributor)
+      .filter(Boolean),
+  );
+  const files = new Set(
+    rows
+      .map((r) => (r.meta as { file?: string } | null)?.file)
+      .filter(Boolean),
+  );
+
+  const avgScore =
+    totalOpportunities > 0
+      ? rows.reduce((sum, r) => sum + r.scoresFinal, 0) / totalOpportunities
+      : 0;
+
+  const dates = rows
+    .map((r) => (r.meta as { date?: string } | null)?.date)
+    .filter(Boolean) as string[];
+
+  dates.sort();
+  const lastUpdated = dates.length > 0 ? dates[dates.length - 1] : "";
+
+  const catCount: Record<string, number> = {};
+  for (const row of rows) {
+    catCount[row.category] = (catCount[row.category] || 0) + 1;
+  }
+  const topCategory = Object.entries(catCount).sort((a, b) => b[1] - a[1])[0]?.[0] || "";
+
+  res.json(
+    GetStatsResponse.parse({
+      total_opportunities: totalOpportunities,
+      total_contributors: contributors.size,
+      total_files: files.size,
+      last_updated: lastUpdated,
+      avg_score: Math.round(avgScore * 10) / 10,
+      top_category: topCategory,
+    }),
+  );
+});
+
+router.get("/categories", async (_req, res): Promise<void> => {
+  const rows = await db.select().from(opportunitiesTable);
+
+  const catMap: Record<string, { scores: number[]; topTitle: string; topScore: number }> = {};
+  for (const row of rows) {
+    if (!catMap[row.category]) {
+      catMap[row.category] = { scores: [], topTitle: "", topScore: -1 };
+    }
+    catMap[row.category].scores.push(row.scoresFinal);
+    if (row.scoresFinal > catMap[row.category].topScore) {
+      catMap[row.category].topScore = row.scoresFinal;
+      catMap[row.category].topTitle = row.title;
+    }
+  }
+
+  const result = Object.entries(catMap).map(([category, data]) => ({
+    category,
+    count: data.scores.length,
+    avg_score:
+      data.scores.length > 0
+        ? Math.round((data.scores.reduce((a, b) => a + b, 0) / data.scores.length) * 10) / 10
+        : 0,
+    top_opportunity_title: data.topTitle || null,
+  }));
+
+  result.sort((a, b) => b.count - a.count);
+  res.json(ListCategoriesResponse.parse(result));
+});
+
+export default router;

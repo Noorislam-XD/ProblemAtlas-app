@@ -3,13 +3,17 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: ProblemAtlas API - serves startup opportunity data from the GitHub dataset
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: opportunities
+    description: Startup opportunity data
+  - name: stats
+    description: Dataset statistics
 paths:
   /healthz:
     get:
@@ -24,6 +28,117 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /opportunities:
+    get:
+      operationId: listOpportunities
+      tags: [opportunities]
+      summary: List all opportunities
+      description: Returns all startup opportunities, optionally filtered and sorted
+      parameters:
+        - name: category
+          in: query
+          schema:
+            type: string
+          description: Filter by category slug
+        - name: search
+          in: query
+          schema:
+            type: string
+          description: Full-text search across title, summary, and pain points
+        - name: sortBy
+          in: query
+          schema:
+            type: string
+            enum: [score, trend, market, severity, newest]
+          description: Sort order
+        - name: minScore
+          in: query
+          schema:
+            type: number
+          description: Minimum final score filter (0-10)
+      responses:
+        "200":
+          description: List of opportunities
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Opportunity"
+
+  /opportunities/{id}:
+    get:
+      operationId: getOpportunity
+      tags: [opportunities]
+      summary: Get a single opportunity by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Opportunity detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Opportunity"
+        "404":
+          description: Not found
+
+  /stats:
+    get:
+      operationId: getStats
+      tags: [stats]
+      summary: Dataset summary statistics
+      description: Returns high-level dataset stats — total opportunities, contributors, files, top categories
+      responses:
+        "200":
+          description: Dataset stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DatasetStats"
+
+  /categories:
+    get:
+      operationId: listCategories
+      tags: [stats]
+      summary: Category breakdown
+      description: Returns per-category counts and average scores
+      responses:
+        "200":
+          description: Category stats
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CategoryStat"
+
+  /opportunities/top:
+    get:
+      operationId: getTopOpportunities
+      tags: [opportunities]
+      summary: Top-scored opportunities
+      description: Returns the top N opportunities by final score — for hero/featured display
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Top opportunities
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Opportunity"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +149,139 @@ components:
       required:
         - status
 
+    Scores:
+      type: object
+      properties:
+        final:       { type: number }
+        frequency:   { type: number }
+        severity:    { type: number }
+        market:      { type: number }
+        trend:       { type: number }
+        competition: { type: number }
+        feasibility: { type: number }
+      required: [final, frequency, severity, market, trend, competition, feasibility]
+
+    PainPoint:
+      type: object
+      properties:
+        title:       { type: string }
+        description: { type: string }
+        severity:    { type: number }
+        category:    { type: string }
+        quotes:
+          type: array
+          items: { type: string }
+        sources:
+          type: array
+          items: { type: string }
+      required: [title, description, severity, category]
+
+    Trend:
+      type: object
+      properties:
+        direction:
+          type: string
+          enum: [rising, stable, declining]
+        momentum_score: { type: number }
+        keywords:
+          type: array
+          items: { type: string }
+
+    Market:
+      type: object
+      properties:
+        tam_estimate:       { type: string }
+        willingness_to_pay: { type: string }
+        target_segments:
+          type: array
+          items: { type: string }
+        revenue_potential:  { type: number }
+
+    Competitor:
+      type: object
+      properties:
+        name:            { type: string }
+        url:             { type: ["string", "null"] }
+        description:     { type: ["string", "null"] }
+        weaknesses:
+          type: array
+          items: { type: string }
+        market_position:
+          type: string
+          enum: [dominant, fragmented, absent]
+      required: [name, market_position]
+
+    Mvp:
+      type: object
+      properties:
+        title:         { type: string }
+        description:   { type: string }
+        core_features:
+          type: array
+          items: { type: string }
+        tech_stack:
+          type: array
+          items: { type: string }
+        time_to_mvp:   { type: string }
+
+    Risks:
+      type: object
+      properties:
+        risks:
+          type: array
+          items: { type: string }
+        assumptions:
+          type: array
+          items: { type: string }
+
+    OpportunityMeta:
+      type: object
+      properties:
+        query:       { type: string }
+        contributor: { type: string }
+        date:        { type: string }
+        sources:
+          type: array
+          items: { type: string }
+        file:        { type: string }
+
+    Opportunity:
+      type: object
+      properties:
+        id:          { type: string }
+        title:       { type: string }
+        summary:     { type: string }
+        category:    { type: string }
+        scores:      { $ref: "#/components/schemas/Scores" }
+        pain_points:
+          type: array
+          items: { $ref: "#/components/schemas/PainPoint" }
+        trend:       { $ref: "#/components/schemas/Trend" }
+        market:      { $ref: "#/components/schemas/Market" }
+        competitors:
+          type: array
+          items: { $ref: "#/components/schemas/Competitor" }
+        mvp:         { $ref: "#/components/schemas/Mvp" }
+        risks:       { $ref: "#/components/schemas/Risks" }
+        _meta:       { $ref: "#/components/schemas/OpportunityMeta" }
+      required: [id, title, summary, scores, pain_points]
+
+    DatasetStats:
+      type: object
+      properties:
+        total_opportunities: { type: integer }
+        total_contributors:  { type: integer }
+        total_files:         { type: integer }
+        last_updated:        { type: string }
+        avg_score:           { type: number }
+        top_category:        { type: string }
+      required: [total_opportunities, total_contributors, total_files]
+
+    CategoryStat:
+      type: object
+      properties:
+        category:  { type: string }
+        count:     { type: integer }
+        avg_score: { type: number }
+        top_opportunity_title: { type: ["string", "null"] }
+      required: [category, count, avg_score]

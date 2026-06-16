@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "ProblemAtlas"
+version = "1.0.0"
+id = "artifacts/problem-atlas"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 20757
+
+[services.development]
+run = "pnpm --filter @workspace/problem-atlas run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/problem-atlas", "run", "build" ]
+publicDir = "artifacts/problem-atlas/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "20757"
+BASE_PATH = "/"
