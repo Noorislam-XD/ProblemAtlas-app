@@ -1,0 +1,50 @@
+2026-06-17T22:17:39.056753651Z [inf]  scheduling build on Metal builder "production-builderv3-us-west1-5lwn"
+2026-06-17T22:17:41.198084955Z [inf]  fetched snapshot sha256:b7f7791497832dc21064662c929c49fb2bfc314834a5cf76ec640f5252bd0623 (79 kB bytes)
+2026-06-17T22:17:41.198122288Z [inf]  fetching snapshot
+2026-06-17T22:17:41.582900452Z [inf]  unpacking archive
+2026-06-17T22:17:42.074601229Z [inf]  using build driver railpack-v0.28.0
+2026-06-17T22:17:42.394423274Z [inf]                     
+2026-06-17T22:17:42.394426180Z [inf]  [38;2;125;86;243m╭─────────────────╮[0m
+2026-06-17T22:17:42.394426659Z [inf]  [38;2;125;86;243m│[0m Railpack 0.28.0 [38;2;125;86;243m│[0m
+2026-06-17T22:17:42.394427123Z [inf]  [38;2;125;86;243m╰─────────────────╯[0m
+2026-06-17T22:17:42.394427590Z [inf]  
+2026-06-17T22:17:42.394428665Z [inf]    [33m⚠ Script start.sh not found[0m
+2026-06-17T22:17:42.394429050Z [inf]    [1;31m✖ Railpack could not determine how to build the app.[0m
+2026-06-17T22:17:42.394429841Z [inf]    
+2026-06-17T22:17:42.394430254Z [inf]    The following languages are supported:
+2026-06-17T22:17:42.394430799Z [inf]    - Php
+2026-06-17T22:17:42.394431343Z [inf]    - Golang
+2026-06-17T22:17:42.394432059Z [inf]    - Java
+2026-06-17T22:17:42.394432355Z [inf]    - Rust
+2026-06-17T22:17:42.394432662Z [inf]    - Ruby
+2026-06-17T22:17:42.394433044Z [inf]    - Elixir
+2026-06-17T22:17:42.394435387Z [inf]    - Python
+2026-06-17T22:17:42.394435750Z [inf]    - Deno
+2026-06-17T22:17:42.394436147Z [inf]    - Dotnet
+2026-06-17T22:17:42.394436493Z [inf]    - Node
+2026-06-17T22:17:42.394437045Z [inf]    - Gleam
+2026-06-17T22:17:42.394437458Z [inf]    - Cpp
+2026-06-17T22:17:42.394437820Z [inf]    - Staticfile
+2026-06-17T22:17:42.394438122Z [inf]    - Shell
+2026-06-17T22:17:42.394438395Z [inf]    
+2026-06-17T22:17:42.394438882Z [inf]    The app contents that Railpack analyzed contains:
+2026-06-17T22:17:42.394439080Z [inf]    
+2026-06-17T22:17:42.394439332Z [inf]    ./
+2026-06-17T22:17:42.394439605Z [inf]    ├── .github/
+2026-06-17T22:17:42.394439834Z [inf]    ├── data/
+2026-06-17T22:17:42.394440067Z [inf]    ├── pipeline/
+2026-06-17T22:17:42.394440284Z [inf]    ├── site/
+2026-06-17T22:17:42.394440595Z [inf]    ├── tests/
+2026-06-17T22:17:42.394440828Z [inf]    ├── .gitignore
+2026-06-17T22:17:42.394441040Z [inf]    ├── .replit
+2026-06-17T22:17:42.394441839Z [inf]    ├── CONTRIBUTING.md
+2026-06-17T22:17:42.394442225Z [inf]    ├── Makefile
+2026-06-17T22:17:42.394442683Z [inf]    ├── README.md
+2026-06-17T22:17:42.394443222Z [inf]    ├── SECURITY.md
+2026-06-17T22:17:42.394443462Z [inf]    ├── replit.nix
+2026-06-17T22:17:42.394443954Z [inf]    └── zipFile.zip
+2026-06-17T22:17:42.394444282Z [inf]    
+2026-06-17T22:17:42.394445525Z [inf]    Check out the docs for more information: https://railpack.com
+2026-06-17T22:17:42.394446034Z [inf]  
+2026-06-17T22:17:42.394446574Z [inf]  
+2026-06-17T22:17:42.395021036Z [err]  railpack process exited with an error
