@@ -232,7 +232,7 @@ export default function Detail() {
                     </div>
                     {comp.weaknesses && (
                       <ul className="text-xs text-muted-foreground list-disc pl-4 space-y-1">
-                        {comp.weaknesses.map((w, wi) => <li key={qi}>{w}</li>)}
+                        {comp.weaknesses.map((w, wi) => <li key={wi}>{w}</li>)}
                       </ul>
                     )}
                   </div>
