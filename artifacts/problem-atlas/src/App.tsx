@@ -6,6 +6,7 @@ import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
 import Detail from "@/pages/detail";
 import Submit from "@/pages/submit";
+import Admin from "@/pages/admin";
 import { useEffect } from "react";
 
 const queryClient = new QueryClient();
@@ -16,6 +17,7 @@ function Router() {
       <Route path="/" component={Home} />
       <Route path="/opportunity/:id" component={Detail} />
       <Route path="/submit" component={Submit} />
+      <Route path="/admin" component={Admin} />
       <Route component={NotFound} />
     </Switch>
   );
