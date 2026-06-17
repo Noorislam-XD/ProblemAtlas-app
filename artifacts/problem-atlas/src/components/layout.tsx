@@ -14,6 +14,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
               Open Dataset
             </span>
           </Link>
+          <Link
+            href="/submit"
+            className="flex items-center gap-2 px-4 py-2 rounded-lg border border-primary/40 text-primary text-sm font-mono hover:bg-primary/10 transition-colors"
+          >
+            + Submit Opportunity
+          </Link>
         </div>
       </header>
       <main className="flex-1 container mx-auto px-4 py-8">

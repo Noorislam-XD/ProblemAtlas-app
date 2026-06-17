@@ -8,6 +8,7 @@ import {
   ListCategoriesResponse,
   GetTopOpportunitiesQueryParams,
 } from "@workspace/api-zod";
+import { runScraper } from "../services/scraper.js";
 
 const router: IRouter = Router();
 
@@ -32,6 +33,8 @@ function rowToOpportunity(row: typeof opportunitiesTable.$inferSelect) {
     competitors: row.competitors,
     mvp: row.mvp,
     risks: row.risks,
+    source: row.source,
+    source_url: row.sourceUrl,
     _meta: row.meta,
   };
 }
@@ -45,9 +48,15 @@ router.get("/opportunities", async (req, res): Promise<void> => {
 
   const { category, search, sortBy, minScore } = parsed.data;
 
-  let query = db.select().from(opportunitiesTable).$dynamic();
+  let query = db
+    .select()
+    .from(opportunitiesTable)
+    .where(eq(opportunitiesTable.status, "approved"))
+    .$dynamic();
 
-  const conditions: ReturnType<typeof eq>[] = [];
+  const conditions: ReturnType<typeof eq>[] = [
+    eq(opportunitiesTable.status, "approved"),
+  ];
 
   if (category) {
     conditions.push(eq(opportunitiesTable.category, category));
@@ -97,6 +106,7 @@ router.get("/opportunities/top", async (req, res): Promise<void> => {
   const rows = await db
     .select()
     .from(opportunitiesTable)
+    .where(eq(opportunitiesTable.status, "approved"))
     .orderBy(desc(opportunitiesTable.scoresFinal))
     .limit(limit);
 
@@ -124,8 +134,86 @@ router.get("/opportunities/:id", async (req, res): Promise<void> => {
   res.json(rowToOpportunity(row));
 });
 
+const VALID_CATEGORIES = new Set([
+  "developer-tools",
+  "productivity",
+  "ai",
+  "fintech",
+  "saas",
+  "health",
+  "education",
+  "other",
+]);
+
+router.post("/opportunities/submit", async (req, res): Promise<void> => {
+  const body = req.body as Record<string, unknown>;
+  const title = typeof body["title"] === "string" ? body["title"].trim() : "";
+  const summary = typeof body["summary"] === "string" ? body["summary"].trim() : "";
+  const category = typeof body["category"] === "string" ? body["category"] : "other";
+  const source_url = typeof body["source_url"] === "string" ? body["source_url"].trim() : undefined;
+  const pain_points = typeof body["pain_points"] === "string" ? body["pain_points"].trim() : "";
+  const contributor_name = typeof body["contributor_name"] === "string" ? body["contributor_name"].trim() : undefined;
+
+  if (title.length < 5 || title.length > 200) {
+    res.status(400).json({ error: "Title must be between 5 and 200 characters" });
+    return;
+  }
+  if (summary.length < 20 || summary.length > 1000) {
+    res.status(400).json({ error: "Summary must be between 20 and 1000 characters" });
+    return;
+  }
+  if (!VALID_CATEGORIES.has(category)) {
+    res.status(400).json({ error: "Invalid category" });
+    return;
+  }
+  if (pain_points.length < 10) {
+    res.status(400).json({ error: "Pain points must be at least 10 characters" });
+    return;
+  }
+
+  const id = `manual_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+
+  await db.insert(opportunitiesTable).values({
+    opportunityId: id,
+    title,
+    summary,
+    category,
+    scoresFinal: 0,
+    scoresFrequency: 0,
+    scoresSeverity: 0,
+    scoresMarket: 0,
+    scoresTrend: 0,
+    scoresCompetition: 0,
+    scoresFeasibility: 0,
+    painPoints: pain_points
+      .split("\n")
+      .filter(Boolean)
+      .map((t: string) => ({ score: "?/10", text: t.trim() })),
+    competitors: [],
+    meta: {
+      contributor: contributor_name ?? "anonymous",
+      date: new Date().toISOString().split("T")[0],
+    },
+    status: "pending",
+    source: "manual",
+    sourceUrl: source_url ?? null,
+  });
+
+  res.status(201).json({ success: true, message: "Submission received — thank you! It will be reviewed shortly." });
+});
+
+router.post("/admin/scrape", async (req, res): Promise<void> => {
+  try {
+    const inserted = await runScraper();
+    res.json({ success: true, inserted });
+  } catch (err) {
+    res.status(500).json({ error: String(err) });
+  }
+});
+
 router.get("/stats", async (_req, res): Promise<void> => {
-  const rows = await db.select().from(opportunitiesTable);
+  const rows = await db.select().from(opportunitiesTable)
+    .where(eq(opportunitiesTable.status, "approved"));
 
   const totalOpportunities = rows.length;
   const contributors = new Set(
@@ -170,7 +258,8 @@ router.get("/stats", async (_req, res): Promise<void> => {
 });
 
 router.get("/categories", async (_req, res): Promise<void> => {
-  const rows = await db.select().from(opportunitiesTable);
+  const rows = await db.select().from(opportunitiesTable)
+    .where(eq(opportunitiesTable.status, "approved"));
 
   const catMap: Record<string, { scores: number[]; topTitle: string; topScore: number }> = {};
   for (const row of rows) {

@@ -22,6 +22,9 @@ export const opportunitiesTable = pgTable("opportunities", {
   mvp: jsonb("mvp"),
   risks: jsonb("risks"),
   meta: jsonb("meta"),
+  status: text("status").notNull().default("approved"),
+  source: text("source").notNull().default("manual"),
+  sourceUrl: text("source_url"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });
