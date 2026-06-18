@@ -2,10 +2,10 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { logger } from "../lib/logger.js";
 
 const apiKey = process.env["GEMINI_API_KEY"];
-if (!apiKey) throw new Error("GEMINI_API_KEY is required");
+if (!apiKey) logger.warn("GEMINI_API_KEY not set — AI scoring disabled");
 
-const genAI = new GoogleGenerativeAI(apiKey);
-const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-lite" });
+const genAI = apiKey ? new GoogleGenerativeAI(apiKey) : null;
+const model = genAI ? genAI.getGenerativeModel({ model: "gemini-2.0-flash-lite" }) : null;
 
 export interface ScoredOpportunity {
   title: string;
@@ -65,6 +65,8 @@ export async function scorePost(
   title: string,
   content: string
 ): Promise<ScoredOpportunity | null> {
+  if (!model) return null;
+
   const prompt = SCORING_PROMPT.replace("{{TITLE}}", title).replace(
     "{{CONTENT}}",
     content.slice(0, 2000)
