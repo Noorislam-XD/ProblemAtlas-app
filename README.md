@@ -3,7 +3,7 @@
 > **Startup opportunity discovery, on autopilot.**
 > Scrapes Reddit & Hacker News for real user pain points, scores them with Gemini AI, and surfaces the ones worth building on.
 
-🔗 **Live demo:** https://problem-atlas--animeforever69o.replit.app/
+🔗 **Live:** https://problem-atlas--animeforever69o.replit.app/
 
 ---
 
