@@ -141,18 +141,6 @@ pnpm run build
 
 The repo includes `railway.json`. Connect the repo to a Railway project, add `DATABASE_URL` and `GEMINI_API_KEY` as environment variables, and Railway will handle the rest. The API server serves the compiled frontend as static files in production.
 
----
-
-## Environment Variables
-
-| Variable | Required | Description |
-|---|---|---|
-| `DATABASE_URL` | ✅ | PostgreSQL connection string |
-| `GEMINI_API_KEY` | ✅ | Google AI Studio API key |
-| `NODE_ENV` | — | Set to `production` to serve frontend from API |
-| `PORT` | — | API server port (default: 5000) |
-
----
 
 ## Scripts
 
